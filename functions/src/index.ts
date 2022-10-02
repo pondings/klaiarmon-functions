@@ -1,23 +1,23 @@
 import * as functions from "firebase-functions";
+import axios from 'axios';
 
-// // Start writing Firebase Functions
-// // https://firebase.google.com/docs/functions/typescript
-//
 export const alexaNotify = functions.https.onRequest(async (request, response) => {
+  const message = request.query.notification;
+  functions.logger.info(request.query);
+  functions.logger.info(`Start alexa notify function with message: ${message}`);
+
   response = setResponseCORS(response);
-
   const token = request.get('Authorization')?.split('Bearer ')[1];
-  functions.logger.info(token);
   try {
-    const validToken = await functions.app.admin.auth().verifyIdToken(token!);
-    functions.logger.info('validToken', validToken);
-    functions.logger.info(validToken);
+    await functions.app.admin.auth().verifyIdToken(token!);
+    const url = `https://api.notifymyecho.com/v1/NotifyMe?notification=${message}&accessCode=${process.env.ALEXA_NOTIFY_CREDENTIAL}`;
+    await axios.get(url);
 
-    response.send({ message: 'Hello from Firebase!' });
+    response.send({ message: 'Success' });
   } catch (err) {
     functions.logger.error(err);
-    response.status(401)
-      .send({ error: 'Unauthorized' });
+    response.status(500)
+      .send({ error: 'Unexpected Error!' });
   }
 });
 
