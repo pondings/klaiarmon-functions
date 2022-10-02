@@ -11,9 +11,15 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FIREBASE_TOKEN: '${{ secrets.FIREBASE_TOKEN }}'
+      ALEXA_NOTIFY_CREDENTIAL: '${{ secrets.ALEXA_NOTIFY_CREDENTIAL }}'
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v2
+      - name: Write secret to .env
+        working-directory: functions
+        run: |
+          echo ALEXA_NOTIFY_CREDENTIAL="$ALEXA_NOTIFY_CREDENTIAL" >> ./.env
+        shell: bash
       - name: Install Dependencies
         working-directory: functions
         run: npm install
