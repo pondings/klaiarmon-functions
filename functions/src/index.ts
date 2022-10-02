@@ -1,27 +1,54 @@
 import * as functions from "firebase-functions";
+import moment = require("moment");
 
-// // Start writing Firebase Functions
-// // https://firebase.google.com/docs/functions/typescript
-//
-export const alexaNotify = functions.https.onRequest(async (request, response) => {
+export const getTodayCalendarEvent = functions.https.onRequest(async (request, response) => {
+  const today = moment();
+  functions.logger.info('Start get calendar event', new Date(), today.startOf('day').toDate());
   response = setResponseCORS(response);
 
-  const token = request.get('Authorization')?.split('Bearer ')[1];
-  functions.logger.info(token);
   try {
-    const validToken = await functions.app.admin.auth().verifyIdToken(token!);
-    functions.logger.info('validToken', validToken);
-    functions.logger.info(validToken);
+    const token = request.get('Authorization')?.split('Bearer ')[1];
+    await validateUserToken(token!);
 
-    response.send({ message: 'Hello from Firebase!' });
+    const firestore = functions.app.admin.firestore();
+    const celendarEvent = firestore.collection('calendar/event/custom-event')
+      .where('start', '>=', today.startOf('day').toDate())
+      .where('start', '<=', today.endOf('day').toDate());
+    const users = (await firestore.collection('users').get()).docs.map(doc => doc.data());
+    const events = (await celendarEvent.get()).docs.map(doc => mapEventToResponse(doc, users));
+
+    response.send({ data: events });
   } catch (err) {
-    functions.logger.error(err);
-    response.status(401)
-      .send({ error: 'Unauthorized' });
-  }
+    let errMessage = err === 'TOKEN_ERR' ? 'Unauthorized' : 'Unexpected Error';
+    let errStatus = err === 'TOKEN_ERR' ? 401 : 500;
+    functions.logger.error('Error while get today calendar event', err);
+    response.status(errStatus)
+      .send({ error: errMessage });
+  } 
 });
 
-export const setResponseCORS= (response: functions.Response) => {
+const mapEventToResponse = (doc: any, users: any[]) => {
+  const data = doc.data();
+  
+  const createdBy = data.meta.createdBy;
+  const user = users.find(user => user.uid === createdBy);
+  return {
+    title: data.title,
+    createdBy: user.displayName,
+    description: data.meta.description
+  };
+};
+
+const validateUserToken = async (token: string)  => {
+  try {
+    await functions.app.admin.auth().verifyIdToken(token!);
+  } catch (err) {
+    functions.logger.error(`Error while validate user token`, err);
+    throw 'TOKEN_ERR';
+  }
+}
+
+const setResponseCORS = (response: functions.Response) => {
   return response.set('Access-Control-Allow-Origin', '*')
     .set('Access-Control-Allow-Methods', 'GET, PUT, POST, OPTIONS')
     .set('Access-Control-Allow-Headers', '*');
