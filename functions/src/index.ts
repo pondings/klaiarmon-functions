@@ -1,25 +1,42 @@
 import * as functions from "firebase-functions";
 
-// // Start writing Firebase Functions
-// // https://firebase.google.com/docs/functions/typescript
-//
-export const alexaNotify = functions.https.onRequest(async (request, response) => {
+import { execGetTodayCalendarEvent } from "./getTodayCalendarEvent";
+import { execRecurringExpenseSchedule } from "./recurringExpenseSchedule";
+
+export const getTodayCalendarEvent = functions.https.onRequest(async (request, response) => {
   response = setResponseCORS(response);
-
-  const token = request.get('Authorization')?.split('Bearer ')[1];
-  functions.logger.info(token);
   try {
-    const validToken = await functions.app.admin.auth().verifyIdToken(token!);
-    functions.logger.info('validToken', validToken);
-    functions.logger.info(validToken);
-
-    response.send({ message: 'Hello from Firebase!' });
+    const token = request.get('Authorization')?.split('Bearer ')[1];
+    await validateUserToken(token!);
+    await execGetTodayCalendarEvent(request, response);
   } catch (err) {
-    functions.logger.error(err);
-    response.status(401)
-      .send({ error: 'Unauthorized' });
+    errorHandle(response, err);
   }
 });
+
+export const recurringExpenseSchedule = functions.pubsub.schedule('0 20 * * *').timeZone('Asia/Bangkok').onRun(async (_) => {
+    try {
+      await execRecurringExpenseSchedule();
+    } catch (err) {
+      functions.logger.error(err);
+    }
+});
+
+const validateUserToken = async (token: string) => {
+  try {
+    await functions.app.admin.auth().verifyIdToken(token!);
+  } catch (err) {
+    throw 'TOKEN_ERR';
+  }
+};
+
+const errorHandle = (response: functions.Response<any>, err: any) => {
+  let errMessage = err === 'TOKEN_ERR' ? 'Unauthorized' : 'Unexpected Error';
+  let errStatus = err === 'TOKEN_ERR' ? 401 : 500;
+  functions.logger.error('Error while exec', err);
+  response.status(errStatus)
+    .send({ error: errMessage });
+};
 
 export const setResponseCORS= (response: functions.Response) => {
   return response.set('Access-Control-Allow-Origin', '*')
