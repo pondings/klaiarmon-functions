@@ -1,10 +1,10 @@
 import * as functions from "firebase-functions";
-import moment = require("moment");
+import moment = require("moment-timezone");
 
 export const execGetTodayCalendarEvent = async (request: functions.https.Request, response: functions.Response<any>) => {
     functions.logger.info('Start get calendar event');
     
-    const today = moment();
+    const today = moment().tz('Asia/Bangkok');
     const firestore = functions.app.admin.firestore();
     const celendarEvent = firestore.collection('calendar/event/custom-event')
         .where('start', '>=', today.startOf('day').toDate())
