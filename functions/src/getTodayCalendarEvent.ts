@@ -1,10 +1,11 @@
 import * as functions from "firebase-functions";
 import moment = require("moment-timezone");
+import { THAILAND_TZ } from "./common/constants/time-zone";
 
 export const execGetTodayCalendarEvent = async (request: functions.https.Request, response: functions.Response<any>) => {
     functions.logger.info('Start get calendar event');
     
-    const today = moment().tz('Asia/Bangkok');
+    const today = moment().tz(THAILAND_TZ);
     const firestore = functions.app.admin.firestore();
     const celendarEvent = firestore.collection('calendar/event/custom-event')
         .where('start', '>=', today.startOf('day').toDate())
