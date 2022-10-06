@@ -8,8 +8,9 @@ const EXPENSE_CONTENT_NOTIFICATION_TEMPLATE = '<font face="Arial">Hi <b>{0},<br>
 const EXPENSE_DETAIL_NOTIFICATION_TEMPLATE = '<li><b>{0} amount</b> {1}</li>';
 
 const RECURRING_COLLECTION_PATH = 'accounting/expense/recurring';
-const EXPENSE_COLLECTION_PATH = 'accounting/expense/data';
-const NOTIFICATION_COLLECTION_PATH = 'notification';
+const EXPENSE_COLLECTION_PATH = 'accounting/expense/data-test';
+const NOTIFICATION_COLLECTION_PATH = 'notification-test';
+const ALEXA_NOTIFICATION_COLLECTION_PATH = 'alexa-notification';
 
 export const execRecurringExpenseSchedule = async () => {
     const firestore = functions.app.admin.firestore();
@@ -42,8 +43,21 @@ export const execRecurringExpenseSchedule = async () => {
         await firestore.collection(EXPENSE_COLLECTION_PATH).add(expense);
         await firestore.collection(RECURRING_COLLECTION_PATH).doc(id).update(recurring);
         await pushExpenseNotification(recurring);
+        await addToAlexaNotification(recurring);
     });
 };
+
+export const addToAlexaNotification = async (recurExpense: any) => {
+    if (![0, '0', null, undefined].includes(recurExpense.amount)) return;
+
+    const firestore = functions.app.admin.firestore();
+
+    const message = `${recurExpense.name} paid by ${recurExpense.paidBy}`;
+    const meta = { createdBy: 'SYSTEM', createdDate: Moment.get().toDate(), updatedBy: 'SYSTEM', updatedDate: Moment.get().toDate() };
+    const alexaNotification: any = { alert: true, message, meta, tag: 'RECURRING_EXPENSE' };
+
+    firestore.collection(ALEXA_NOTIFICATION_COLLECTION_PATH).add(alexaNotification);
+}
 
 export const pushExpenseNotification = async (recurExpense: any) => {
     if ([0, '0', null, undefined].includes(recurExpense.amount)) return;
