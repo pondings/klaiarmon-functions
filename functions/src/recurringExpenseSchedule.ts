@@ -3,13 +3,15 @@ import * as functions from "firebase-functions";
 import { Timestamp } from 'firebase-admin/firestore';
 import { stringFormat } from "./common/utils/common-utils";
 import Moment from "./common/utils/moment-utils";
+import { USER_COLLECTION_PATH } from "./common/constants/collection-path";
 
 const EXPENSE_CONTENT_NOTIFICATION_TEMPLATE = '<font face="Arial">Hi <b>{0},<br></b></font><p><span><b>System</b></span><font face="Arial">&#160;is <b>added the new</b> expense which included you in the bill.</font></p><div><b><u>Expense Info</u></b></div><div><b>Name</b>:&#160;<span>{1}</span></div><div><b>Amount</b>:&#160;<span>{2}</span></div><div><b>Date</b>:&#160;<span>{3}</span></div><div><b>Bill to</b></div><div></div><ol>{4}</ol><div></div>';
 const EXPENSE_DETAIL_NOTIFICATION_TEMPLATE = '<li><b>{0} amount</b> {1}</li>';
 
 const RECURRING_COLLECTION_PATH = 'accounting/expense/recurring';
-const EXPENSE_COLLECTION_PATH = 'accounting/expense/data';
-const NOTIFICATION_COLLECTION_PATH = 'notification';
+const EXPENSE_COLLECTION_PATH = 'accounting/expense/data-test';
+const NOTIFICATION_COLLECTION_PATH = 'notification-test';
+const ALEXA_NOTIFICATION_COLLECTION_PATH = 'alexa-notification';
 
 export const execRecurringExpenseSchedule = async () => {
     const firestore = functions.app.admin.firestore();
@@ -42,8 +44,28 @@ export const execRecurringExpenseSchedule = async () => {
         await firestore.collection(EXPENSE_COLLECTION_PATH).add(expense);
         await firestore.collection(RECURRING_COLLECTION_PATH).doc(id).update(recurring);
         await pushExpenseNotification(recurring);
+        await addToAlexaNotification(recurring);
     });
 };
+
+export const addToAlexaNotification = async (recurExpense: any) => {
+    if (![0, '0', null, undefined].includes(recurExpense.amount)) return;
+
+    const firestore = functions.app.admin.firestore();
+
+    const users = (await firestore.collection(`${USER_COLLECTION_PATH}`).get()).docs.map(doc => doc.data());
+
+    const paidBy = users.find(user => user.uid === recurExpense.paidBy);
+    const billingTo = recurExpense.billings.map((billing: any) => users.find(user => user.uid === billing.user)?.displayName);
+
+    const lastBillingPerson = billingTo.pop();
+    const billingMessage = `${billingTo.join(', ')} and ${lastBillingPerson}`;
+    const message = `${recurExpense.name} paid by ${paidBy?.displayName} billing to ${billingMessage}`;
+    const meta = { createdBy: 'SYSTEM', createdDate: Moment.get().toDate(), updatedBy: 'SYSTEM', updatedDate: Moment.get().toDate() };
+    const alexaNotification: any = { alert: true, message, meta, tag: 'RECURRING_EXPENSE' };
+
+    firestore.collection(ALEXA_NOTIFICATION_COLLECTION_PATH).add(alexaNotification);
+}
 
 export const pushExpenseNotification = async (recurExpense: any) => {
     if ([0, '0', null, undefined].includes(recurExpense.amount)) return;
