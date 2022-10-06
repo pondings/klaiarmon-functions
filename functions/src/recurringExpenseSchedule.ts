@@ -60,7 +60,7 @@ export const addToAlexaNotification = async (recurExpense: any) => {
 
     const lastBillingPerson = billingTo.pop();
     const billingMessage = `${billingTo.join(', ')} and ${lastBillingPerson}`;
-    const message = `${recurExpense.name} paid by ${paidBy?.displayName} billing to ${billingMessage}`;
+    const message = `${recurExpense.name} paid by ${paidBy?.displayName} <break strength="weak"/> billing to ${billingMessage}`;
     const meta = { createdBy: 'SYSTEM', createdDate: Moment.get().toDate(), updatedBy: 'SYSTEM', updatedDate: Moment.get().toDate() };
     const alexaNotification: any = { alert: true, message, meta, tag: 'RECURRING_EXPENSE' };
 
