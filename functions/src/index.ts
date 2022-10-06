@@ -1,4 +1,5 @@
 import * as functions from "firebase-functions";
+import { execGetAlexaNotification } from "./getAlexaNotification";
 
 import { execGetTodayCalendarEvent } from "./getTodayCalendarEvent";
 import { execRecurringExpenseSchedule } from "./recurringExpenseSchedule";
@@ -9,6 +10,17 @@ export const getTodayCalendarEvent = functions.https.onRequest(async (request, r
     const token = request.get('Authorization')?.split('Bearer ')[1];
     await validateUserToken(token!);
     await execGetTodayCalendarEvent(request, response);
+  } catch (err) {
+    errorHandle(response, err);
+  }
+});
+
+export const getAlexaNotification = functions.https.onRequest(async (request, response) => {
+  response = setResponseCORS(response);
+  try {
+    const token = request.get('Authorization')?.split('Bearer ')[1];
+    await validateUserToken(token!);
+    await execGetAlexaNotification(request, response);
   } catch (err) {
     errorHandle(response, err);
   }
