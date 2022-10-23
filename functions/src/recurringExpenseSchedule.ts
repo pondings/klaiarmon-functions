@@ -9,8 +9,8 @@ const EXPENSE_CONTENT_NOTIFICATION_TEMPLATE = '<font face="Arial">Hi <b>{0},<br>
 const EXPENSE_DETAIL_NOTIFICATION_TEMPLATE = '<li><b>{0} amount</b> {1}</li>';
 
 const RECURRING_COLLECTION_PATH = 'accounting/expense/recurring';
-const EXPENSE_COLLECTION_PATH = 'accounting/expense/data-test';
-const NOTIFICATION_COLLECTION_PATH = 'notification-test';
+const EXPENSE_COLLECTION_PATH = 'accounting/expense/data';
+const NOTIFICATION_COLLECTION_PATH = 'notification';
 const ALEXA_NOTIFICATION_COLLECTION_PATH = 'alexa-notification';
 
 export const execRecurringExpenseSchedule = async () => {
